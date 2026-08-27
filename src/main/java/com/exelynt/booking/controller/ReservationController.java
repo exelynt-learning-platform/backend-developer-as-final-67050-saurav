@@ -36,7 +36,7 @@ public class ReservationController {
             @Valid @RequestBody CreateReservationRequest request,
             Authentication authentication) {
 
-        String username = authentication.getName();
+        String username = getAuthenticatedUsername(authentication);
 
         return new ResponseEntity<>(
                 reservationService.createReservation(request, username),
@@ -92,7 +92,7 @@ public class ReservationController {
         PageRequest pageable =
                 PageRequest.of(page, size, sort);
 
-        String username = authentication.getName();
+        String username = getAuthenticatedUsername(authentication);
 
         return ResponseEntity.ok(
                 reservationService.getReservations(
@@ -112,7 +112,7 @@ public class ReservationController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        String username = authentication.getName();
+        String username = getAuthenticatedUsername(authentication);
 
         return ResponseEntity.ok(
                 reservationService.getReservationById(
@@ -130,7 +130,7 @@ public class ReservationController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        String username = authentication.getName();
+        String username = getAuthenticatedUsername(authentication);
 
         return ResponseEntity.ok(
                 reservationService.cancelReservation(
@@ -162,5 +162,16 @@ public class ReservationController {
         reservationService.deleteReservation(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+
+    // Helper method to safely get authenticated username
+    private String getAuthenticatedUsername(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("User is not authenticated");
+        }
+
+        return authentication.getName();
     }
 }

@@ -7,6 +7,7 @@ import com.exelynt.booking.entity.ReservationStatus;
 import com.exelynt.booking.entity.Resource;
 import com.exelynt.booking.entity.Role;
 import com.exelynt.booking.entity.User;
+import com.exelynt.booking.exception.AccessDeniedException;
 import com.exelynt.booking.exception.InvalidBookingException;
 import com.exelynt.booking.exception.ResourceNotFoundException;
 import com.exelynt.booking.repository.ReservationRepository;
@@ -75,7 +76,7 @@ public class ReservationService {
                                         + request.getResourceId()));
 
 
-        // Get logged-in user from JWT username
+        // Get logged-in user
         User user = userRepository
                 .findByUserName(username)
                 .orElseThrow(() ->
@@ -162,36 +163,40 @@ public class ReservationService {
                 .map(this::mapToDTO);
     }
 
-
-    // =========================
+    
     // GET RESERVATION BY ID
-    // =========================
 
     public ReservationDTO getReservationById(
-            Long id,
+            Long reservationId,
             String username) {
 
+        // Find reservation
         Reservation reservation =
-                reservationRepository.findById(id)
+                reservationRepository
+                        .findById(reservationId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Reservation not found with ID: "
-                                                + id));
+                                                + reservationId));
 
 
-        User user = userRepository
-                .findByUserName(username)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found: " + username));
+        // Find logged-in user
+        User user =
+                userRepository
+                        .findByUserName(username)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "User not found: "
+                                                + username));
 
 
         // USER can access only own reservation
+        // ADMIN can access any reservation
         if (user.getRole() != Role.ROLE_ADMIN &&
                 !reservation.getUser().getId()
                         .equals(user.getId())) {
 
-            throw new InvalidBookingException(
+            throw new AccessDeniedException(
                     "You are not authorized to view this reservation.");
         }
 
@@ -224,11 +229,12 @@ public class ReservationService {
 
 
         // USER can cancel only own reservation
+        // ADMIN can cancel any reservation
         if (user.getRole() != Role.ROLE_ADMIN &&
                 !reservation.getUser().getId()
                         .equals(user.getId())) {
 
-            throw new InvalidBookingException(
+            throw new AccessDeniedException(
                     "You are not authorized to cancel this reservation.");
         }
 
@@ -291,7 +297,8 @@ public class ReservationService {
     // DTO MAPPING
     // =========================
 
-    private ReservationDTO mapToDTO(Reservation reservation) {
+    private ReservationDTO mapToDTO(
+            Reservation reservation) {
 
         return new ReservationDTO(
                 reservation.getId(),
